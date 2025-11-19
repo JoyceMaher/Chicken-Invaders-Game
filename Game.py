@@ -8,6 +8,9 @@ from OpenGL.GLUT import *
 
 glutInit()
 
+
+# test 
+
 # --- Player properties ---
 player_x = 0
 player_y = -4
