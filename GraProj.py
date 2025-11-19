@@ -2,9 +2,9 @@ import pygame as pg
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from pygame.locals import *
-import math
 import random
 import time
+import math
 
 def draw_sphere(x,y,z,radius,r,g,b):
     glColor3f(r,g,b)
@@ -59,20 +59,37 @@ def generate_chickens(n):
     num_gold=n-num_black-num_white
     types_list=["black"]*num_black + ["white"]*num_white + ["gold"]*num_gold
     random.shuffle(types_list)
-
     chickens=[]
     for idx,t in enumerate(types_list):
         chickens.append({
-            'x':0,
-            'y':-6,
-            'target_y':3,   # vertical target before splitting
+            'base_x':0,
+            'base_y':-6,
+            'target_x':0,
+            'target_y':3,
             'type':t,
             'angle':0,
-            'curve_done':False,
-            'drop_delay':idx*0.5, # staggered drop delay
-            'last_drop':time.time()
+            'arrived':False,
+            'drop_delay':idx*0.5,
+            'last_drop':time.time(),
+            'offset_x':0,
+            'offset_y':0,
+            'rand_phase':random.uniform(0, 2*math.pi),
+            'rand_speed_x':random.uniform(0.5,1.5),
+            'rand_speed_y':random.uniform(0.5,1.5),
+            'rand_amp_x':random.uniform(0.2,0.5),
+            'rand_amp_y':random.uniform(0.1,0.3),
+            'direction': random.choice([-1,1])
         })
     return chickens
+
+def draw_eggs(eggs):
+    for egg in eggs[:]:
+        egg['y'] -= 0.1
+        if egg['y'] < -6:
+            eggs.remove(egg)
+        else:
+            color={'black':(0,0,0),'white':(1,1,1),'gold':(1,0.84,0)}[egg['type']]
+            draw_sphere(egg['x'],egg['y'],0,0.15,*color)
 
 def main():
     pg.init()
@@ -81,12 +98,26 @@ def main():
     gluPerspective(45, display[0]/display[1], 0.1, 50.0)
     glTranslatef(0,0,-20)
 
-    n=20
+    n=25
     chickens=generate_chickens(n)
     eggs=[]
-    move_speed=0.08
-    split_done=False
     start_time=time.time()
+    fixed_speed = 0.1
+
+    cols = math.ceil(math.sqrt(n))
+    rows = math.ceil(n / cols)
+    spacing_x = 16 / (cols - 1)
+    top_y = 5
+    bottom_y = 2
+    spacing_y = (top_y - bottom_y) / max(rows-1,1)
+    k = 0
+    for r in range(rows):
+        for c_idx in range(cols):
+            if k >= n:
+                break
+            chickens[k]['target_x'] = -8 + c_idx*spacing_x + random.uniform(-0.3,0.3)
+            chickens[k]['target_y'] = top_y - r*spacing_y + random.uniform(-0.2,0.2)
+            k += 1
 
     while True:
         for event in pg.event.get():
@@ -98,54 +129,46 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
         current_time=time.time()
 
-        # Vertical movement first
-        if not split_done:
-            for c in chickens:
-                if c['y'] < c['target_y']:
-                    c['y'] += move_speed
-                else:
-                    c['curve_done']=True
-
-            if all(c['curve_done'] for c in chickens):
-                split_done=True
-                start_x=-8
-                end_x=8
-                row1=chickens[:n//2]
-                row2=chickens[n//2:]
-                spacing1=(end_x-start_x)/max(len(row1)-1,1)
-                spacing2=(end_x-start_x)/max(len(row2)-1,1)
-                for j,c in enumerate(row1):
-                    c['x']=start_x+j*spacing1
-                    c['y']=3.5
-                for j,c in enumerate(row2):
-                    c['x']=start_x+j*spacing2
-                    c['y']=2.5
-
-        # Draw and rotate chickens
         for c in chickens:
-            c['angle']+=2
+            if not c['arrived']:
+                if abs(c['base_x'] - c['target_x']) > fixed_speed:
+                    c['base_x'] += fixed_speed if c['base_x'] < c['target_x'] else -fixed_speed
+                else:
+                    c['base_x'] = c['target_x']
+
+                if abs(c['base_y'] - c['target_y']) > fixed_speed:
+                    c['base_y'] += fixed_speed if c['base_y'] < c['target_y'] else -fixed_speed
+                else:
+                    c['base_y'] = c['target_y']
+
+                if c['base_x'] == c['target_x'] and c['base_y'] == c['target_y']:
+                    c['arrived'] = True
+            else:
+                t = time.time()
+                c['offset_x'] = math.sin(t*c['rand_speed_x'] + c['rand_phase']) * c['rand_amp_x']
+                c['offset_y'] = math.sin(t*c['rand_speed_y'] + c['rand_phase']) * c['rand_amp_y']
+
+                c['base_x'] += c['direction'] * 0.05
+                if c['base_x'] >= 8 or c['base_x'] <= -8:
+                    c['direction'] *= -1
+
+        for c in chickens:
+            c['angle'] += 2
+            draw_x = c['base_x'] + (c['offset_x'] if c['arrived'] else 0)
+            draw_y = c['base_y'] + (c['offset_y'] if c['arrived'] else 0)
             glPushMatrix()
-            glTranslatef(c['x'],c['y'],0)
+            glTranslatef(draw_x, draw_y,0)
             glRotatef(c['angle'],0,1,0)
             draw_chicken_3d(0,0,0,0.5,c['type'])
             glPopMatrix()
 
-            # Drop eggs only after split and staggered
-            if split_done and current_time-start_time>=c['drop_delay']:
-                drop_interval={'black':4,'white':3,'gold':5}[c['type']]
-                if current_time-c['last_drop']>=drop_interval:
-                    eggs.append({'x':c['x'],'y':c['y']-0.7,'type':c['type']})
+            if c['arrived'] and current_time-start_time >= c['drop_delay']:
+                drop_interval={'black':6,'white':5,'gold':7}[c['type']]
+                if current_time-c['last_drop'] >= drop_interval:
+                    eggs.append({'x':c['base_x'],'y':c['base_y']-0.7,'type':c['type']})
                     c['last_drop']=current_time
 
-        # Update eggs
-        for egg in eggs[:]:
-            egg['y']-=0.1
-            if egg['y']<-6:
-                eggs.remove(egg)
-            else:
-                color={'black':(0,0,0),'white':(1,1,1),'gold':(1,0.84,0)}[egg['type']]
-                draw_sphere(egg['x'],egg['y'],0,0.15,*color)
-
+        draw_eggs(eggs)
         pg.display.flip()
         pg.time.wait(10)
 
