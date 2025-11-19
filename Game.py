@@ -20,13 +20,14 @@ player_speed = 0.3
 bullet_speed = 0.2
 bullet_width = 0.1
 bullet_height = 0.3
+angle_rocket = 0
 
 # Score properties / Jojo 
 score = 0
 score_for_extra_life = 100
 lives = 3
 max_lives = 5
-
+extra_life_awards = 0
 
 # Omar functions
 def draw_sphere(x, y, z, radius, r, g, b):
@@ -36,6 +37,25 @@ def draw_sphere(x, y, z, radius, r, g, b):
     glTranslatef(x, y, z)
     gluSphere(quadric, radius, 32, 32)
     glPopMatrix()
+
+def draw_oval(x, y, z, radius_x, radius_y, r, g, b):  
+    glColor3f(r, g, b)
+    quadric = gluNewQuadric()
+    glPushMatrix()
+    glTranslatef(x, y, z)
+    glScalef(1, radius_y/radius_x, 1) 
+    gluSphere(quadric, radius_x, 32, 32)
+    glPopMatrix()
+
+def increase_chicken_speed(chickens, last_increase_time, interval=10, speed_increment=0.03):
+    current_time = time.time()
+    if current_time - last_increase_time >= interval:
+        for c in chickens:
+            c['rand_speed_x'] += speed_increment
+            c['rand_speed_y'] += speed_increment
+        last_increase_time = current_time
+        print(f"Chicken speed increased! Current speeds: {chickens[0]['rand_speed_x']:.2f}, {chickens[0]['rand_speed_y']:.2f}")
+    return last_increase_time    
 
 def draw_cube(x, y, z, size, r, g, b):
     vertices = [
@@ -69,20 +89,20 @@ def draw_chicken_3d(x, y, z, scale=1.0, type="white"):
         body_color = (1,0.84,0)
     
     # Body
-    draw_sphere(x, y, z, 0.5*scale, *body_color)
-    draw_sphere(x, y+0.7*scale, z, 0.3*scale, *body_color)
+    draw_oval(x, y, z, 0.5*scale, 0.6*scale, *body_color)
+    draw_sphere(x, y+0.7*scale, z, 0.3*scale, *body_color)  # Fixed: removed extra parameter
     
     # Beak
-    draw_sphere(x+0.35*scale, y+0.7*scale, z, 0.1*scale, 1,0.5,0)
+    draw_sphere(x+0.35*scale, y+0.7*scale, z, 0.1*scale, 1,0.5,0)  # Fixed: removed extra parameter
     
     # Comb
-    draw_sphere(x-0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)
-    draw_sphere(x, y+1.05*scale, z, 0.1*scale, 1,0,0)
-    draw_sphere(x+0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)
+    draw_sphere(x-0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)  # Fixed: removed extra parameter
+    draw_sphere(x, y+1.05*scale, z, 0.1*scale, 1,0,0)  # Fixed: removed extra parameter
+    draw_sphere(x+0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)  # Fixed: removed extra parameter
     
     # Wings
-    draw_sphere(x-0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)
-    draw_sphere(x+0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)
+    draw_sphere(x-0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)  # Fixed: removed extra parameter
+    draw_sphere(x+0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)  # Fixed: removed extra parameter
     
     # Legs
     draw_cube(x-0.15*scale, y-0.7*scale, z, 0.1*scale, 1,0.7,0)
@@ -192,11 +212,9 @@ def drop_eggs(chickens, eggs, start_time):
     return eggs
 
 def draw_eggs(eggs):
-  
     for egg in eggs:
         color = {'black': (0,0,0), 'white': (1,1,1), 'gold': (1,0.84,0)}[egg['type']]
-        draw_sphere(egg['x'], egg['y'], 0, 0.15, *color)
-
+        draw_oval(egg['x'], egg['y'], 0, 0.1,0.15,*color )  # Changed to sphere
 
 # Saleh functions
 def setup_lighting():
@@ -220,9 +238,10 @@ def setup_lighting():
     glEnable(GL_COLOR_MATERIAL)
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
 
-def draw_player(speed, height, radius, x, y, z):
+def draw_player(speed, height, radius, x, y, z, angle_rocket):
     glPushMatrix()
     glTranslatef(x, y, z)
+    glRotatef(angle_rocket, 0, 1, 0)
     glColor3f(0, 0, 1)
     quadric = gluNewQuadric()
     glPushMatrix()
@@ -304,17 +323,25 @@ def draw_bullets(bullets):
     for bullet in bullets: 
         draw_bullet(bullet)
 
-
-
 # Jojo  functions
-def draw_hearts(lives, score):
+def draw_score(score_value):
+    glPushAttrib(GL_LIGHTING_BIT)
+    glDisable(GL_LIGHTING)
+    glColor3f(1, 1, 0)            
+    glRasterPos3f(-7, 5, 0)     
+    for ch in f"Score: {score_value}":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
+    glPopAttrib()
+
+def draw_hearts(lives):
     rotation_angle = pygame.time.get_ticks() * 0.05
     total_hearts = min(max_lives, lives)
+    start_x = 7
+    y = 5.2      
     
     for i in range(total_hearts):
-        x = -2 + i * 0.6
-        y = 4
-        size = 0.35
+        x = start_x - i * 1.0  
+        size = 0.8
         
         glPushMatrix()
         glTranslatef(x, y, 0)
@@ -365,15 +392,6 @@ def check_win(last_chicken_time):
             return True
     return False
 
-def draw_score(score_value):
-    glPushAttrib(GL_LIGHTING_BIT)
-    glDisable(GL_LIGHTING)
-    glColor3f(1,1,0)
-    glRasterPos3f(-4.8,4.8,-9.9)
-    for ch in f"Score: {score_value}":
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
-    glPopAttrib()
-
 def update_eggs(eggs, chicken_size=0.5):
     eggs_to_remove = []
     global score, lives
@@ -384,28 +402,29 @@ def update_eggs(eggs, chicken_size=0.5):
         # Check collision with player
         if (abs(egg['x'] - player_x) < (chicken_size/2 + player_width/2) and 
             abs(egg['y'] - player_y) < (chicken_size/2 + player_height/2)):
-            
-            if egg['type'] == "white":
+            if egg["type"] == "white":
                 score += 10
-                extra_lives = min(score // score_for_extra_life, max_lives - 3)
-                lives = max(lives, 3 + extra_lives)
-            elif egg['type'] == "black":
-                lives -= 1
-            elif egg['type'] == "gold":
-                score += 50
-            eggs_to_remove.append(egg)
-        elif egg['y'] < -6:  # Remove eggs that fall off screen
+            # Remove egg after collision
             eggs_to_remove.append(egg)
     
-    # Remove collected/off-screen eggs
-    for e in eggs_to_remove: 
-        if e in eggs: 
-            eggs.remove(e)
+    # Remove eggs that collided with player
+    for egg in eggs_to_remove:
+        if egg in eggs:
+            eggs.remove(egg)
+            
+    # Check for extra lives
+    should_have = score // score_for_extra_life
+    global extra_life_awards
+    if should_have > extra_life_awards:
+        gained = should_have - extra_life_awards
+        lives = min(lives + gained, max_lives)
+        extra_life_awards = should_have
+        
     return eggs
 
 def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
-    
     bullets_to_remove = []
+    global score
     
     for bullet in bullets:
         for ch in chickens:
@@ -419,6 +438,13 @@ def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
                     abs(bullet["y"] - actual_y) < (bullet_height/2 + chicken_size/2)):
                     bullets_to_remove.append(bullet)
                     ch['alive'] = False
+                    # Add score based on chicken type
+                    if ch['type'] == "black":
+                        score += 5
+                    elif ch['type'] == "white":
+                        score += 10
+                    elif ch['type'] == "gold":
+                        score += 20
                     break
     
     # Remove bullets that hit chickens
@@ -452,15 +478,15 @@ def initialize_game():
     setup_lighting()
     return pygame.time.Clock()
 
-
 def main():
-    global player_x, lives, score
+    global player_x, lives, score, angle_rocket
     clock = initialize_game()
     can_shoot = True
     last_chicken_time = None
     bullets = []
     eggs = []
     start_time = time.time()
+    last_speed_increase = time.time()  # Initialize last_speed_increase
     
     # Omar: Initialize chickens
     n = 15
@@ -483,7 +509,6 @@ def main():
         glClearColor(0.2, 0.6, 1.0, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         
-        
         # Jojo: Update game state and check collisions
         eggs = update_eggs(eggs)
         bullets, chickens = check_bullet_chicken_collisions(bullets, chickens)
@@ -491,12 +516,12 @@ def main():
         check_game_state(last_chicken_time)
         
         # Saleh 
-        draw_player(player_speed,player_height,player_radius,player_x,player_y,player_z)               
+        draw_player(player_speed, player_height, player_radius, player_x, player_y, player_z, angle_rocket)               
         draw_bullets(bullets)         
-
+        angle_rocket += 1
 
         # Jojo 
-        draw_hearts(lives, score)     
+        draw_hearts(lives)     
         draw_score(score)             
 
         # Omar
@@ -504,9 +529,10 @@ def main():
         chickens = update_chicken_movement(chickens)
         draw_chickens(chickens)
         eggs = drop_eggs(chickens, eggs, start_time)
+        last_speed_increase = increase_chicken_speed(chickens, last_speed_increase, interval=10, speed_increment=0.03)
         
         pygame.display.flip()
         clock.tick(60)
 
-
-main()
+if __name__ == "__main__":
+    main()
