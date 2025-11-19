@@ -6,6 +6,13 @@ import random
 import time
 import math
 
+def increase_chicken_speed(chicken_speed, last_time, interval, amount):
+    current = time.time()
+    if current - last_time >= interval:
+        chicken_speed += amount
+        last_time = current
+    return chicken_speed, last_time
+
 def draw_sphere(x,y,z,radius,r,g,b):
     glColor3f(r,g,b)
     quadric = gluNewQuadric()
@@ -104,6 +111,11 @@ def main():
     start_time=time.time()
     fixed_speed = 0.1
 
+    chicken_speed = 0.05
+    interval = 10
+    amount = 0.02
+    last_time = time.time()
+
     cols = math.ceil(math.sqrt(n))
     rows = math.ceil(n / cols)
     spacing_x = 16 / (cols - 1)
@@ -129,6 +141,10 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
         current_time=time.time()
 
+        chicken_speed, last_time = increase_chicken_speed(
+            chicken_speed, last_time, interval, amount
+        )
+
         for c in chickens:
             if not c['arrived']:
                 if abs(c['base_x'] - c['target_x']) > fixed_speed:
@@ -147,8 +163,7 @@ def main():
                 t = time.time()
                 c['offset_x'] = math.sin(t*c['rand_speed_x'] + c['rand_phase']) * c['rand_amp_x']
                 c['offset_y'] = math.sin(t*c['rand_speed_y'] + c['rand_phase']) * c['rand_amp_y']
-
-                c['base_x'] += c['direction'] * 0.05
+                c['base_x'] += c['direction'] * chicken_speed
                 if c['base_x'] >= 8 or c['base_x'] <= -8:
                     c['direction'] *= -1
 
