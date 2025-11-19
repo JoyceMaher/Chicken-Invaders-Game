@@ -76,14 +76,95 @@ def setup_lighting():
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
 
 # --- Drawing functions ---
-def draw_player(x, y):
-    glColor3f(0, 1, 0)
-    glBegin(GL_QUADS)
-    glVertex3f(x - player_width/2, y - player_height/2, 0)
-    glVertex3f(x + player_width/2, y - player_height/2, 0)
-    glVertex3f(x + player_width/2, y + player_height/2, 0)
-    glVertex3f(x - player_width/2, y + player_height/2, 0)
+def draw_player(speed, height, radius, x, y, z):
+    glPushMatrix()
+
+    # Move player to world position
+    glTranslatef(x, y, z)
+
+    # ============================
+    # 1) Cylinder (aligned along +Y)
+    # ============================
+    glColor3f(0, 0, 1)
+    quadric = gluNewQuadric()
+
+    glPushMatrix()
+    glRotatef(-90, 1, 0, 0)   # Cylinder → along +Y instead of +Z
+    gluCylinder(quadric, radius, radius, height, 20, 20)
+    glPopMatrix()
+
+    # ============================
+    # 2) Sphere على رأس السلندر
+    # ============================
+    glColor3f(0, 0, 1)
+    quadric = gluNewQuadric()
+
+    glPushMatrix()
+    glTranslatef(0, height, 0)   # sphere فوق السلندر مباشرة
+    gluSphere(quadric, radius, 20, 20)
+    glPopMatrix()
+
+    # ============================
+    # 3) Window circle (Disk) على جسم السلندر
+    # ============================
+    glPushMatrix()
+
+    window_radius = radius * 0.6        # حجم النافذة
+    window_y = height * 0.5             # منتصف السلندر
+
+    glTranslatef(0, window_y, radius + 0.001)   # على السطح الأمامي للسلندر
+    glRotatef(0, 0, 0, 1)  # disk already faces +Z (perfect orientation)
+
+    glColor3f(1, 1, 1)   # white window
+    quad2 = gluNewQuadric()
+    gluDisk(quad2, 0.0, window_radius, 32, 1)
+
+    glPopMatrix()
+    # ============================
+    # True Half Triangle Wings (one full edge attached)
+    # ============================
+
+    wing_y = height * 0.5
+    wing_out = radius * 2.0
+    wing_up = radius * 1.2     # ارتفاع الرأس
+
+    # -------- Right Wing --------
+    glPushMatrix()
+    glColor3f(1, 0, 0)
+    glTranslatef(0, wing_y, 0)
+
+    glBegin(GL_TRIANGLES)
+
+    # ضلع كامل ملزق على السلندر
+    glVertex3f(radius, -0.2, 0)     # النقطة السفلى على سطح السلندر
+    glVertex3f(radius,  0.2, 0)     # النقطة العليا على سطح السلندر
+
+    # رأس الجناح للخارج
+    glVertex3f(radius + wing_out/2, 0, 0)
+
     glEnd()
+    glPopMatrix()
+
+    # -------- Left Wing --------
+    glPushMatrix()
+    glColor3f(1, 0, 0)
+    glTranslatef(0, wing_y, 0)
+
+    glBegin(GL_TRIANGLES)
+
+    # ضلع كامل ملزق على السلندر
+    glVertex3f(-radius, -0.2, 0)    # نقطة سفلية
+    glVertex3f(-radius,  0.2, 0)    # نقطة علوية
+
+    # الرأس للخارج
+    glVertex3f(-(radius + wing_out/2), 0, 0)
+
+    glEnd()
+    glPopMatrix()
+
+
+
+    glPopMatrix()
 
 def draw_bullet(bullet):
     glColor3f(1, 1, 0)
