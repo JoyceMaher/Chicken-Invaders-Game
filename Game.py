@@ -392,6 +392,17 @@ def check_win(last_chicken_time):
             return True
     return False
 
+def collect_white_egg():
+    global score
+    score += 10
+    print("Collected white egg! +10 points")
+
+def collect_black_egg():
+    global lives
+    if lives > 0:
+        lives -= 1
+    print("Collected black egg! -1 life")
+
 def update_eggs(eggs, chicken_size=0.5):
     eggs_to_remove = []
     global score, lives
@@ -399,12 +410,13 @@ def update_eggs(eggs, chicken_size=0.5):
     for egg in eggs:
         egg['y'] -= 0.1
         
-        # Check collision with player
         if (abs(egg['x'] - player_x) < (chicken_size/2 + player_width/2) and 
             abs(egg['y'] - player_y) < (chicken_size/2 + player_height/2)):
+            
             if egg["type"] == "white":
-                score += 10
-            # Remove egg after collision
+                collect_white_egg()  
+            elif egg["type"] == "black":
+                collect_black_egg() 
             eggs_to_remove.append(egg)
     
     # Remove eggs that collided with player
