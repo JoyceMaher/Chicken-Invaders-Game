@@ -332,9 +332,6 @@ def collect_gold_egg():
     global power_level
     if power_level < 3:
         power_level += 1
-
-
-
 def create_power_bullets(player_x, player_y):
     """Create 1, 2 or 3 bullets depending on power_level"""
     bullets = []
@@ -431,9 +428,10 @@ def collect_white_egg():
     print("Collected white egg! +10 points")
 
 def collect_black_egg():
-    global lives
+    global lives,power_level
     if lives > 0:
         lives -= 1
+        power_level=1
     print("Collected black egg! -1 life")
 
 def update_eggs(eggs, chicken_size=0.5):
