@@ -6,6 +6,7 @@ from OpenGL.GLUT import *
 import math
 import random
 import time
+import os
 
 glutInit()
 
@@ -20,24 +21,17 @@ player_speed = 0.3
 bullet_speed = 0.2
 bullet_width = 0.1
 bullet_height = 0.3
+angle_rocket = 0
+power_level=1
 
 # Score properties / Jojo 
 score = 0
 score_for_extra_life = 100
 lives = 3
 max_lives = 5
-
+extra_life_awards = 0
 
 # Omar functions
-def draw_oval(x, y, z, radius_x, radius_y, r, g, b):  # omar
-    glColor3f(r, g, b)
-    quadric = gluNewQuadric()
-    glPushMatrix()
-    glTranslatef(x, y, z)
-    glScalef(1, radius_y/radius_x, 1)  # omar
-    gluSphere(quadric, radius_x, 32, 32)
-    glPopMatrix()
-
 def draw_sphere(x, y, z, radius, r, g, b):
     glColor3f(r, g, b)
     quadric = gluNewQuadric()
@@ -45,6 +39,25 @@ def draw_sphere(x, y, z, radius, r, g, b):
     glTranslatef(x, y, z)
     gluSphere(quadric, radius, 32, 32)
     glPopMatrix()
+
+def draw_oval(x, y, z, radius_x, radius_y, r, g, b):  
+    glColor3f(r, g, b)
+    quadric = gluNewQuadric()
+    glPushMatrix()
+    glTranslatef(x, y, z)
+    glScalef(1, radius_y/radius_x, 1) 
+    gluSphere(quadric, radius_x, 32, 32)
+    glPopMatrix()
+
+def increase_chicken_speed(chickens, last_increase_time, interval=10, speed_increment=0.03):
+    current_time = time.time()
+    if current_time - last_increase_time >= interval:
+        for c in chickens:
+            c['rand_speed_x'] += speed_increment
+            c['rand_speed_y'] += speed_increment
+        last_increase_time = current_time
+        print(f"Chicken speed increased! Current speeds: {chickens[0]['rand_speed_x']:.2f}, {chickens[0]['rand_speed_y']:.2f}")
+    return last_increase_time    
 
 def draw_cube(x, y, z, size, r, g, b):
     vertices = [
@@ -78,20 +91,20 @@ def draw_chicken_3d(x, y, z, scale=1.0, type="white"):
         body_color = (1,0.84,0)
     
     # Body
-    draw_oval(x, y, z, 0.35*scale, 0.5*scale, *body_color)  # omar
-    draw_sphere(x, y+0.7*scale, z, 0.3*scale, *body_color)
+    draw_oval(x, y, z, 0.5*scale, 0.6*scale, *body_color)
+    draw_sphere(x, y+0.7*scale, z, 0.3*scale, *body_color)  # Fixed: removed extra parameter
     
     # Beak
-    draw_sphere(x+0.35*scale, y+0.7*scale, z, 0.1*scale, 1,0.5,0)
+    draw_sphere(x+0.35*scale, y+0.7*scale, z, 0.1*scale, 1,0.5,0)  # Fixed: removed extra parameter
     
     # Comb
-    draw_sphere(x-0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)
-    draw_sphere(x, y+1.05*scale, z, 0.1*scale, 1,0,0)
-    draw_sphere(x+0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)
+    draw_sphere(x-0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)  # Fixed: removed extra parameter
+    draw_sphere(x, y+1.05*scale, z, 0.1*scale, 1,0,0)  # Fixed: removed extra parameter
+    draw_sphere(x+0.15*scale, y+1.0*scale, z, 0.1*scale, 1,0,0)  # Fixed: removed extra parameter
     
     # Wings
-    draw_sphere(x-0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)
-    draw_sphere(x+0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)
+    draw_sphere(x-0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)  # Fixed: removed extra parameter
+    draw_sphere(x+0.45*scale, y+0.2*scale, z, 0.25*scale, *body_color)  # Fixed: removed extra parameter
     
     # Legs
     draw_cube(x-0.15*scale, y-0.7*scale, z, 0.1*scale, 1,0.7,0)
@@ -187,7 +200,7 @@ def draw_chickens(chickens):
         glPushMatrix()
         glTranslatef(draw_x, draw_y, 0)
         glRotatef(c['angle'], 0, 1, 0)
-        draw_chicken_3d(0, 0, 0, 0.4, c['type'])
+        draw_chicken_3d(0, 0, 0, 0.45, c['type'])
         glPopMatrix()
 
 def drop_eggs(chickens, eggs, start_time):
@@ -203,8 +216,7 @@ def drop_eggs(chickens, eggs, start_time):
 def draw_eggs(eggs):
     for egg in eggs:
         color = {'black': (0,0,0), 'white': (1,1,1), 'gold': (1,0.84,0)}[egg['type']]
-        draw_oval(egg['x'], egg['y'], 0, 0.1, 0.15, *color)  # omar
-
+        draw_oval(egg['x'], egg['y'], 0, 0.1,0.15,*color )  # Changed to sphere
 
 # Saleh functions
 def setup_lighting():
@@ -228,9 +240,10 @@ def setup_lighting():
     glEnable(GL_COLOR_MATERIAL)
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
 
-def draw_player(speed, height, radius, x, y, z):
+def draw_player(speed, height, radius, x, y, z, angle_rocket):
     glPushMatrix()
     glTranslatef(x, y, z)
+    glRotatef(angle_rocket, 0, 1, 0)
     glColor3f(0, 0, 1)
     quadric = gluNewQuadric()
     glPushMatrix()
@@ -297,7 +310,10 @@ def handle_player_input(can_shoot, bullets):
 
     # Shooting
     if keys[pygame.K_SPACE] and can_shoot:
-        bullets.append({"x": player_x, "y": player_y + player_height/2})
+        # create bullets according to current power level and add them
+        new_bullets = create_power_bullets(player_x, player_y + player_height/2)
+        for b in new_bullets:
+            bullets.append(b)
         can_shoot = False
     
     return can_shoot, bullets
@@ -312,17 +328,48 @@ def draw_bullets(bullets):
     for bullet in bullets: 
         draw_bullet(bullet)
 
+def collect_gold_egg():
+    """Increase power level when collecting a golden egg"""
+    global power_level
+    if power_level < 3:
+        power_level += 1
+def create_power_bullets(player_x, player_y):
+    """Create 1, 2 or 3 bullets depending on power_level"""
+    bullets = []
 
+    if power_level == 1:
+        bullets.append({"x": player_x, "y": player_y})
+
+    elif power_level == 2:
+        bullets.append({"x": player_x - 0.2, "y": player_y})
+        bullets.append({"x": player_x + 0.2, "y": player_y})
+
+    elif power_level == 3:
+        bullets.append({"x": player_x,       "y": player_y})
+        bullets.append({"x": player_x - 0.25, "y": player_y})
+        bullets.append({"x": player_x + 0.25, "y": player_y})
+
+    return bullets
 
 # Jojo  functions
-def draw_hearts(lives, score):
+def draw_score(score_value):
+    glPushAttrib(GL_LIGHTING_BIT)
+    glDisable(GL_LIGHTING)
+    glColor3f(1, 1, 0)            
+    glRasterPos3f(-7, 5, 0)     
+    for ch in f"Score: {score_value}":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
+    glPopAttrib()
+
+def draw_hearts(lives):
     rotation_angle = pygame.time.get_ticks() * 0.05
     total_hearts = min(max_lives, lives)
+    start_x = 7
+    y = 5.2      
     
     for i in range(total_hearts):
-        x = -2 + i * 0.6
-        y = 4
-        size = 0.35
+        x = start_x - i * 1.0  
+        size = 0.8
         
         glPushMatrix()
         glTranslatef(x, y, 0)
@@ -373,27 +420,17 @@ def check_win(last_chicken_time):
             return True
     return False
 
-def draw_score(score_value):
-    glPushAttrib(GL_LIGHTING_BIT)
-    glDisable(GL_LIGHTING)
-    glColor3f(1,1,0)
-    glRasterPos3f(-4.8,4.8,-9.9)
-    for ch in f"Score: {score_value}":
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
-    glPopAttrib()
+def collect_white_egg():
+    global score
+    score += 10
+    print("Collected white egg! +10 points")
 
-
-# Omar function: Increase chicken speed over time
-def increase_chicken_speed(chickens, last_increase_time, interval=10, speed_increment=0.03):
-    current_time = time.time()
-    if current_time - last_increase_time >= interval:
-        for c in chickens:
-            c['rand_speed_x'] += speed_increment
-            c['rand_speed_y'] += speed_increment
-        last_increase_time = current_time
-        print(f"Chicken speed increased! Current speeds: {chickens[0]['rand_speed_x']:.2f}, {chickens[0]['rand_speed_y']:.2f}")
-    return last_increase_time
-
+def collect_black_egg():
+    global lives,power_level
+    if lives > 0:
+        lives -= 1
+        power_level=1
+    print("Collected black egg! -1 life")
 
 def update_eggs(eggs, chicken_size=0.5):
     eggs_to_remove = []
@@ -402,30 +439,36 @@ def update_eggs(eggs, chicken_size=0.5):
     for egg in eggs:
         egg['y'] -= 0.1
         
-        # Check collision with player
         if (abs(egg['x'] - player_x) < (chicken_size/2 + player_width/2) and 
             abs(egg['y'] - player_y) < (chicken_size/2 + player_height/2)):
             
-            if egg['type'] == "white":
-                score += 10
-                extra_lives = min(score // score_for_extra_life, max_lives - 3)
-                lives = max(lives, 3 + extra_lives)
-            elif egg['type'] == "black":
-                lives -= 1
-            elif egg['type'] == "gold":
-                score += 50
+            if egg["type"] == "white":
+                collect_white_egg()  
+            elif egg["type"] == "black":
+                collect_black_egg() 
+            elif egg["type"]=="gold":
+                collect_gold_egg()
             eggs_to_remove.append(egg)
-        elif egg['y'] < -6:  # Remove eggs that fall off screen
-            eggs_to_remove.append(egg)
+            
     
-    # Remove collected/off-screen eggs
-    for e in eggs_to_remove: 
-        if e in eggs: 
-            eggs.remove(e)
+    # Remove eggs that collided with player
+    for egg in eggs_to_remove:
+        if egg in eggs:
+            eggs.remove(egg)
+            
+    # Check for extra lives
+    should_have = score // score_for_extra_life
+    global extra_life_awards
+    if should_have > extra_life_awards:
+        gained = should_have - extra_life_awards
+        lives = min(lives + gained, max_lives)
+        extra_life_awards = should_have
+        
     return eggs
 
 def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
     bullets_to_remove = []
+    global score
     
     for bullet in bullets:
         for ch in chickens:
@@ -440,13 +483,12 @@ def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
                     bullets_to_remove.append(bullet)
                     ch['alive'] = False
                     # Add score based on chicken type
-                    global score
-                    if ch['type'] == "white":
+                    if ch['type'] == "black":
                         score += 5
-                    elif ch['type'] == "black":
+                    elif ch['type'] == "white":
                         score += 10
                     elif ch['type'] == "gold":
-                        score += 25
+                        score += 20
                     break
     
     # Remove bullets that hit chickens
@@ -480,23 +522,102 @@ def initialize_game():
     setup_lighting()
     return pygame.time.Clock()
 
+#omar
+def welcome_screen():
+    pygame.init()
+    display = (800, 600)
+    screen = pygame.display.set_mode(display)
+    pygame.display.set_caption("Chicken Invaders - Welcome")
+
+    try:
+        background_image = pygame.image.load(r"C:\Users\omarm\OneDrive\Desktop\222.jpg")
+        background_image = pygame.transform.scale(background_image, display)
+    except:
+        print("Background image not found. Using black background.")
+        background_image = None
+
+    font_title = pygame.font.SysFont("Arial", 50, bold=True)
+    font_option = pygame.font.SysFont("Arial", 30, bold=True)
+
+    button_width = 250
+    button_height = 60
+    button_spacing = 20
+    
+    total_height = 2 * button_height + button_spacing
+    start_y = 450 
+    start_button = pygame.Rect((800 - button_width) // 2, start_y, button_width, button_height)
+    quit_button = pygame.Rect((800 - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height)
+
+    while True:
+        if background_image:
+            screen.blit(background_image, (0, 0))
+        else:
+            screen.fill((0, 0, 0))
+
+        title = font_title.render(".", True, (255, 255, 0))
+        screen.blit(title, (120, 100))
+
+        mouse_pos = pygame.mouse.get_pos()
+        
+        start_hover = start_button.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (0, 0, 0), start_button, border_radius=15)
+        border_color = (255, 255, 255) if start_hover else (200, 200, 200)
+        pygame.draw.rect(screen, border_color, start_button, 3, border_radius=15)
+        start_text = font_option.render("START GAME", True, (255, 255, 255))
+        screen.blit(start_text, (start_button.x + 50, start_button.y + 15))
+
+        quit_hover = quit_button.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (0, 0, 0), quit_button, border_radius=15)
+        border_color = (255, 255, 255) if quit_hover else (200, 200, 200)
+        pygame.draw.rect(screen, border_color, quit_button, 3, border_radius=15)
+        quit_text = font_option.render("QUIT GAME", True, (255, 255, 255))
+        screen.blit(quit_text, (quit_button.x + 60, quit_button.y + 15))
+
+        instruction_font = pygame.font.SysFont("Arial", 20)
+        instruction = instruction_font.render(".", True, (255, 255, 255))
+        screen.blit(instruction, (250, 400))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if start_button.collidepoint(mouse_pos):
+                    return True 
+                if quit_button.collidepoint(mouse_pos):
+                    pygame.quit()
+                    quit()
+
+        pygame.display.update()
+
 
 def main():
-    global player_x, lives, score
+    global player_x, lives, score, angle_rocket, power_level, extra_life_awards
+    
+    # omar
+    welcome_screen()
+    
+    # Reset game variables
+    player_x = 0
+    lives = 3
+    score = 0
+    power_level = 1
+    extra_life_awards = 0
+    
+    # Initialize game after welcome screen
     clock = initialize_game()
     can_shoot = True
     last_chicken_time = None
     bullets = []
     eggs = []
     start_time = time.time()
+    last_speed_increase = time.time()  # Initialize last_speed_increase
     
     # Omar: Initialize chickens
     n = 15
     chickens = generate_chickens(n)
     chickens = setup_chicken_positions(chickens, n)
-    
-    # Initialize speed increase timer OUTSIDE the loop
-    last_speed_increase = time.time()
     
     while True:
         for event in pygame.event.get():
@@ -514,7 +635,6 @@ def main():
         glClearColor(0.2, 0.6, 1.0, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         
-        
         # Jojo: Update game state and check collisions
         eggs = update_eggs(eggs)
         bullets, chickens = check_bullet_chicken_collisions(bullets, chickens)
@@ -522,11 +642,12 @@ def main():
         check_game_state(last_chicken_time)
         
         # Saleh 
-        draw_player(player_speed,player_height,player_radius,player_x,player_y,player_z)               
+        draw_player(player_speed, player_height, player_radius, player_x, player_y, player_z, angle_rocket)               
         draw_bullets(bullets)         
+        angle_rocket += 1
 
         # Jojo 
-        draw_hearts(lives, score)     
+        draw_hearts(lives)     
         draw_score(score)             
 
         # Omar
@@ -534,13 +655,10 @@ def main():
         chickens = update_chicken_movement(chickens)
         draw_chickens(chickens)
         eggs = drop_eggs(chickens, eggs, start_time)
-        
-        # Update chicken speed - this should update the timer only when speed increases
         last_speed_increase = increase_chicken_speed(chickens, last_speed_increase, interval=10, speed_increment=0.03)
-
         
         pygame.display.flip()
         clock.tick(60)
 
-
-main()
+if __name__ == "__main__":
+    main()
