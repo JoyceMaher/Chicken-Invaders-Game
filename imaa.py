@@ -530,7 +530,7 @@ def welcome_screen():
     pygame.display.set_caption("Chicken Invaders - Welcome")
 
     try:
-        background_image = pygame.image.load(r"C:\Users\omarm\OneDrive\Desktop\222.jpg")
+        background_image = pygame.image.load(r"background.jpeg")
         background_image = pygame.transform.scale(background_image, display)
     except:
         print("Background image not found. Using black background.")
