@@ -200,7 +200,7 @@ def draw_chickens(chickens):
         glPushMatrix()
         glTranslatef(draw_x, draw_y, 0)
         glRotatef(c['angle'], 0, 1, 0)
-        draw_chicken_3d(0, 0, 0, 0.7, c['type'])
+        draw_chicken_3d(0, 0, 0, 0.45, c['type'])
         glPopMatrix()
 
 def drop_eggs(chickens, eggs, start_time):
