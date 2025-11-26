@@ -412,7 +412,7 @@ def show_message(text):
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
     glPopAttrib()
     pygame.display.flip()
-    pygame.time.wait(3000)
+    pygame.time.wait(1000)  # Just show briefly, game over screen will follow
 
 def check_win(last_chicken_time):
     if last_chicken_time is not None:
@@ -503,15 +503,19 @@ def update_last_chicken_time(chickens, last_chicken_time):
     return last_chicken_time
 
 def check_game_state(last_chicken_time):
+    global lives
+    
     if check_win(last_chicken_time):
-        show_message("YOU WIN")
-        pygame.quit()
-        quit()
+        # Show win screen
+        play_again = game_over_screen(win=True)
+        return play_again
     
     if lives <= 0:
-        show_message("GAME OVER")
-        pygame.quit()
-        quit()
+        # Show game over screen
+        play_again = game_over_screen(win=False)
+        return play_again
+    
+    return None
 
 def initialize_game():
     pygame.init()
@@ -591,74 +595,163 @@ def welcome_screen():
 
         pygame.display.update()
 
+#last screen
+def game_over_screen(win=False):
+    pygame.init()
+    display = (800, 600)
+    screen = pygame.display.set_mode(display)
+    
+    if win:
+        pygame.display.set_caption("")
+        title_text = "YOU WIN!"
+        title_color = (0, 255, 0)  # Green for win
+    else:
+        pygame.display.set_caption("")
+        title_text = ""
+        title_color = (255, 0, 0)  # Red for loss
 
-def main():
-    global player_x, lives, score, angle_rocket, power_level, extra_life_awards
+    try:
+        # You can use the same background or a different one
+        background_image = pygame.image.load(r"C:\Users\omarm\OneDrive\Desktop\222.jpg")
+        background_image = pygame.transform.scale(background_image, display)
+    except:
+        print("Background image not found. Using black background.")
+        background_image = None
+
+    font_title = pygame.font.SysFont("Arial", 60, bold=True)
+    font_option = pygame.font.SysFont("Arial", 30, bold=True)
+    font_score = pygame.font.SysFont("Arial", 24)
+
+    button_width = 250
+    button_height = 60
+    button_spacing = 20
     
-    # omar
-    welcome_screen()
-    
-    # Reset game variables
-    player_x = 0
-    lives = 3
-    score = 0
-    power_level = 1
-    extra_life_awards = 0
-    
-    # Initialize game after welcome screen
-    clock = initialize_game()
-    can_shoot = True
-    last_chicken_time = None
-    bullets = []
-    eggs = []
-    start_time = time.time()
-    last_speed_increase = time.time()  # Initialize last_speed_increase
-    
-    # Omar: Initialize chickens
-    n = 15
-    chickens = generate_chickens(n)
-    chickens = setup_chicken_positions(chickens, n)
-    
+    play_again_button = pygame.Rect((800 - button_width) // 2, 350, button_width, button_height)
+    quit_button = pygame.Rect((800 - button_width) // 2, 350 + button_height + button_spacing, button_width, button_height)
+
     while True:
+        if background_image:
+            screen.blit(background_image, (0, 0))
+        else:
+            screen.fill((0, 0, 0))
+
+        # Draw title
+        title_surface = font_title.render(title_text, True, title_color)
+        screen.blit(title_surface, ((800 - title_surface.get_width()) // 2, 100))
+
+        # Draw score
+        score_surface = font_score.render(f"Final Score: {score}", True, (255, 255, 255))
+        screen.blit(score_surface, ((800 - score_surface.get_width()) // 2, 180))
+
+        mouse_pos = pygame.mouse.get_pos()
+        
+        # Play Again button
+        play_again_hover = play_again_button.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (0, 100, 0) if play_again_hover else (0, 150, 0), play_again_button, border_radius=15)
+        pygame.draw.rect(screen, (255, 255, 255), play_again_button, 3, border_radius=15)
+        play_again_text = font_option.render("PLAY AGAIN", True, (255, 255, 255))
+        screen.blit(play_again_text, (play_again_button.x + 50, play_again_button.y + 15))
+
+        # Quit button
+        quit_hover = quit_button.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (100, 0, 0) if quit_hover else (150, 0, 0), quit_button, border_radius=15)
+        pygame.draw.rect(screen, (255, 255, 255), quit_button, 3, border_radius=15)
+        quit_text = font_option.render("QUIT GAME", True, (255, 255, 255))
+        screen.blit(quit_text, (quit_button.x + 60, quit_button.y + 15))
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
-                can_shoot = True
 
-        # Saleh: Handle player input and update bullets
-        can_shoot, bullets = handle_player_input(can_shoot, bullets)
-        bullets = update_bullets(bullets)
-        
-        # Clear screen
-        glClearColor(0.2, 0.6, 1.0, 1)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        
-        # Jojo: Update game state and check collisions
-        eggs = update_eggs(eggs)
-        bullets, chickens = check_bullet_chicken_collisions(bullets, chickens)
-        last_chicken_time = update_last_chicken_time(chickens, last_chicken_time)
-        check_game_state(last_chicken_time)
-        
-        # Saleh 
-        draw_player(player_speed, player_height, player_radius, player_x, player_y, player_z, angle_rocket)               
-        draw_bullets(bullets)         
-        angle_rocket += 1
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if play_again_button.collidepoint(mouse_pos):
+                    return True  # Play again
+                if quit_button.collidepoint(mouse_pos):
+                    pygame.quit()
+                    quit()
 
-        # Jojo 
-        draw_hearts(lives)     
-        draw_score(score)             
+        pygame.display.update()
 
-        # Omar
-        draw_eggs(eggs)          
-        chickens = update_chicken_movement(chickens)
-        draw_chickens(chickens)
-        eggs = drop_eggs(chickens, eggs, start_time)
-        last_speed_increase = increase_chicken_speed(chickens, last_speed_increase, interval=10, speed_increment=0.03)
+def main():
+    global player_x, lives, score, angle_rocket, power_level, extra_life_awards
+    
+    # Omar - welcome screen
+    welcome_screen()
+    
+    while True:
+        # Reset game variables for new game
+        player_x = 0
+        lives = 3
+        score = 0
+        power_level = 1
+        extra_life_awards = 0
         
-        pygame.display.flip()
-        clock.tick(60)
+        # Initialize game after welcome screen
+        clock = initialize_game()
+        can_shoot = True
+        last_chicken_time = None
+        bullets = []
+        eggs = []
+        start_time = time.time()
+        last_speed_increase = time.time()
+        
+        # Omar: Initialize chickens
+        n = 15
+        chickens = generate_chickens(n)
+        chickens = setup_chicken_positions(chickens, n)
+        
+        game_running = True
+        while game_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+                if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+                    can_shoot = True
+
+            # Saleh: Handle player input and update bullets
+            can_shoot, bullets = handle_player_input(can_shoot, bullets)
+            bullets = update_bullets(bullets)
+            
+            # Clear screen
+            glClearColor(0.2, 0.6, 1.0, 1)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            
+            # Jojo: Update game state and check collisions
+            eggs = update_eggs(eggs)
+            bullets, chickens = check_bullet_chicken_collisions(bullets, chickens)
+            last_chicken_time = update_last_chicken_time(chickens, last_chicken_time)
+            
+            # Check game state - if returns True/False, game should end
+            result = check_game_state(last_chicken_time)
+            if result is not None:
+                if result:  # Play again
+                    game_running = False
+                    break
+                else:       # Quit
+                    pygame.quit()
+                    quit()
+            
+            # Saleh 
+            draw_player(player_speed, player_height, player_radius, player_x, player_y, player_z, angle_rocket)               
+            draw_bullets(bullets)         
+            angle_rocket += 1
+
+            # Jojo 
+            draw_hearts(lives)     
+            draw_score(score)             
+
+            # Omar
+            draw_eggs(eggs)          
+            chickens = update_chicken_movement(chickens)
+            draw_chickens(chickens)
+            eggs = drop_eggs(chickens, eggs, start_time)
+            last_speed_increase = increase_chicken_speed(chickens, last_speed_increase, interval=10, speed_increment=0.03)
+            
+            pygame.display.flip()
+            clock.tick(60)
+
 
 if __name__ == "__main__":
     main()
