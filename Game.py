@@ -207,102 +207,19 @@ def drop_eggs(chickens, eggs, start_time):
     current_time = time.time()
     for c in chickens:
         if c['alive'] and c['arrived'] and current_time - start_time >= c['drop_delay']:
-            # Use individual random offset for each chicken
-            if 'egg_offset' not in c:
-                c['egg_offset'] = random.uniform(0, 3)  # Random offset between 0-3 seconds
-            
-            base_interval = {'black': 6, 'white': 5, 'gold': 7}[c['type']]
-            drop_interval = base_interval
-            
-            # Apply the individual offset
-            adjusted_time = current_time + c['egg_offset']
-            
-            if adjusted_time - c['last_drop'] >= drop_interval:
-                eggs.append({'x': c['base_x'], 'y': c['base_y'] - 0.7, 'type': c['type']})
+            drop_interval = {'black':4,'white':3,'gold':5}[c['type']]
+            if current_time - c['last_drop'] >= drop_interval:
+                eggs.append({'x':c['base_x'],'y':c['base_y']-0.7,'type':c['type']})
                 c['last_drop'] = current_time
     return eggs
 
 def draw_eggs(eggs):
     for egg in eggs:
         color = {'black': (0,0,0), 'white': (1,1,1), 'gold': (1,0.84,0)}[egg['type']]
-        draw_oval(egg['x'], egg['y'], 0, 0.1,0.2,*color )  # Changed to sphere
-
-def welcome_screen():
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load("intro.wav")  
-    pygame.mixer.music.play(0) 
-
-    display = (1400, 800)
-    screen = pygame.display.set_mode(display)
-    pygame.display.set_caption("Chicken Invaders - Welcome")
-
-    try:
-        background_image = pygame.image.load(r"background.jpeg")
-        background_image = pygame.transform.scale(background_image, display)
-    except:
-        print("Background image not found. Using black background.")
-        background_image = None
-
-    font_title = pygame.font.SysFont("Arial", 70, bold=True)  # Increased font size
-    font_option = pygame.font.SysFont("Arial", 35, bold=True)  # Increased font size
-
-    button_width = 300  # Increased button size
-    button_height = 70  # Increased button size
-    button_spacing = 30
-    
-    # Center buttons for 1400x800 screen
-    start_y = 600  # Adjusted position
-    start_button = pygame.Rect((1400 - button_width) // 2, start_y, button_width, button_height)
-    quit_button = pygame.Rect((1400 - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height)
-
-    while True:
-        if background_image:
-            screen.blit(background_image, (0, 0))
-        else:
-            screen.fill((0, 0, 0))
-
-        title = font_title.render("Chicken Invaders", True, (255, 255, 0))
-        screen.blit(title, ((1400 - title.get_width()) // 2, 150))  # Centered title
-
-        mouse_pos = pygame.mouse.get_pos()
-        
-        start_hover = start_button.collidepoint(mouse_pos)
-        pygame.draw.rect(screen, (0, 0, 0), start_button, border_radius=15)
-        border_color = (255, 255, 255) if start_hover else (200, 200, 200)
-        pygame.draw.rect(screen, border_color, start_button, 3, border_radius=15)
-        start_text = font_option.render("START GAME", True, (255, 255, 255))
-        screen.blit(start_text, (start_button.x + 60, start_button.y + 20))  # Adjusted text position
-
-        quit_hover = quit_button.collidepoint(mouse_pos)
-        pygame.draw.rect(screen, (0, 0, 0), quit_button, border_radius=15)
-        border_color = (255, 255, 255) if quit_hover else (200, 200, 200)
-        pygame.draw.rect(screen, border_color, quit_button, 3, border_radius=15)
-        quit_text = font_option.render("QUIT GAME", True, (255, 255, 255))
-        screen.blit(quit_text, (quit_button.x + 70, quit_button.y + 20))  # Adjusted text position
-
-        instruction_font = pygame.font.SysFont("Arial", 24)
-        instruction = instruction_font.render("", True, (255, 255, 255))
-        screen.blit(instruction, ((1400 - instruction.get_width()) // 2, 500))  # Centered instruction
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if start_button.collidepoint(mouse_pos):
-                    pygame.mixer.music.stop()
-                    return True 
-                if quit_button.collidepoint(mouse_pos):
-                    pygame.quit()
-                    quit()
-
-        pygame.display.update()
-
+        draw_oval(egg['x'], egg['y'], 0, 0.1,0.15,*color )  # Changed to sphere
 def game_over_screen(win=False):
     pygame.init()
-    display = (1400, 800)  # Updated to new screen size
+    display = (800, 600)
     screen = pygame.display.set_mode(display)
     
     if win:
@@ -315,24 +232,23 @@ def game_over_screen(win=False):
         title_color = (255, 0, 0)  # Red for loss
 
     try:
-        # Use relative path instead of absolute path
-        background_image = pygame.image.load("background.jpeg")  # Changed to relative path
+        # You can use the same background or a different one
+        background_image = pygame.image.load(r"C:\Users\omarm\OneDrive\Desktop\222.jpg")
         background_image = pygame.transform.scale(background_image, display)
     except:
         print("Background image not found. Using black background.")
         background_image = None
 
-    font_title = pygame.font.SysFont("Arial", 80, bold=True)  # Increased font size
-    font_option = pygame.font.SysFont("Arial", 35, bold=True)  # Increased font size
-    font_score = pygame.font.SysFont("Arial", 30)  # Increased font size
+    font_title = pygame.font.SysFont("Arial", 60, bold=True)
+    font_option = pygame.font.SysFont("Arial", 30, bold=True)
+    font_score = pygame.font.SysFont("Arial", 24)
 
-    button_width = 300  # Increased button size
-    button_height = 70  # Increased button size
-    button_spacing = 30
+    button_width = 250
+    button_height = 60
+    button_spacing = 20
     
-    # Center buttons for 1400x800 screen
-    play_again_button = pygame.Rect((1400 - button_width) // 2, 450, button_width, button_height)
-    quit_button = pygame.Rect((1400 - button_width) // 2, 450 + button_height + button_spacing, button_width, button_height)
+    play_again_button = pygame.Rect((800 - button_width) // 2, 350, button_width, button_height)
+    quit_button = pygame.Rect((800 - button_width) // 2, 350 + button_height + button_spacing, button_width, button_height)
 
     while True:
         if background_image:
@@ -342,11 +258,11 @@ def game_over_screen(win=False):
 
         # Draw title
         title_surface = font_title.render(title_text, True, title_color)
-        screen.blit(title_surface, ((1400 - title_surface.get_width()) // 2, 150))
+        screen.blit(title_surface, ((800 - title_surface.get_width()) // 2, 100))
 
         # Draw score
         score_surface = font_score.render(f"Final Score: {score}", True, (255, 255, 255))
-        screen.blit(score_surface, ((1400 - score_surface.get_width()) // 2, 250))
+        screen.blit(score_surface, ((800 - score_surface.get_width()) // 2, 180))
 
         mouse_pos = pygame.mouse.get_pos()
         
@@ -355,14 +271,14 @@ def game_over_screen(win=False):
         pygame.draw.rect(screen, (0, 100, 0) if play_again_hover else (0, 150, 0), play_again_button, border_radius=15)
         pygame.draw.rect(screen, (255, 255, 255), play_again_button, 3, border_radius=15)
         play_again_text = font_option.render("PLAY AGAIN", True, (255, 255, 255))
-        screen.blit(play_again_text, (play_again_button.x + 60, play_again_button.y + 20))
+        screen.blit(play_again_text, (play_again_button.x + 50, play_again_button.y + 15))
 
         # Quit button
         quit_hover = quit_button.collidepoint(mouse_pos)
         pygame.draw.rect(screen, (100, 0, 0) if quit_hover else (150, 0, 0), quit_button, border_radius=15)
         pygame.draw.rect(screen, (255, 255, 255), quit_button, 3, border_radius=15)
         quit_text = font_option.render("QUIT GAME", True, (255, 255, 255))
-        screen.blit(quit_text, (quit_button.x + 70, quit_button.y + 20))
+        screen.blit(quit_text, (quit_button.x + 60, quit_button.y + 15))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -474,7 +390,6 @@ def handle_player_input(can_shoot, bullets):
         new_bullets = create_power_bullets(player_x, player_y + player_height/2)
         for b in new_bullets:
             bullets.append(b)
-            shoot_sound.play()
         can_shoot = False
     
     return can_shoot, bullets
@@ -494,7 +409,6 @@ def collect_gold_egg():
     global power_level
     if power_level < 3:
         power_level += 1
-
 def create_power_bullets(player_x, player_y):
     """Create 1, 2 or 3 bullets depending on power_level"""
     bullets = []
@@ -574,7 +488,7 @@ def show_message(text):
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
     glPopAttrib()
     pygame.display.flip()
-    pygame.time.wait(1000)  # Just show briefly, game over screen will follow
+    pygame.time.wait(3000)
 
 def check_win(last_chicken_time):
     if last_chicken_time is not None:
@@ -582,7 +496,7 @@ def check_win(last_chicken_time):
             return True
     return False
 
-def collect_white_egg():  
+def collect_white_egg():
     global score
     score += 10
     print("Collected white egg! +10 points")
@@ -605,14 +519,11 @@ def update_eggs(eggs, chicken_size=0.5):
             abs(egg['y'] - player_y) < (chicken_size/2 + player_height/2)):
             
             if egg["type"] == "white":
-                collect_white_egg() 
-                whiteegg_sound.play() 
+                collect_white_egg()  
             elif egg["type"] == "black":
-                collect_black_egg()
-                blackegg_sound.play()
+                collect_black_egg() 
             elif egg["type"]=="gold":
                 collect_gold_egg()
-                goldegg_sound.play()
             eggs_to_remove.append(egg)
             
     
@@ -647,7 +558,6 @@ def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
                     abs(bullet["y"] - actual_y) < (bullet_height/2 + chicken_size/2)):
                     bullets_to_remove.append(bullet)
                     ch['alive'] = False
-                    kill_sound.play()
                     # Add score based on chicken type
                     if ch['type'] == "black":
                         score += 5
@@ -666,8 +576,6 @@ def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
 def update_last_chicken_time(chickens, last_chicken_time):
     if all(not c['alive'] for c in chickens) and last_chicken_time is None:
         last_chicken_time = pygame.time.get_ticks()
-        kill_sound.play()
-
     return last_chicken_time
 
 def check_game_state(last_chicken_time):
@@ -687,45 +595,97 @@ def check_game_state(last_chicken_time):
 
 def initialize_game():
     pygame.init()
-    display = (1400, 800)  # Updated to new screen size
+    display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
     gluPerspective(45, display[0] / display[1], 0.1, 50.0)
     glTranslatef(0, 0, -15)
     setup_lighting()
     return pygame.time.Clock()
 
+#omar
+def welcome_screen():
+    pygame.init()
+    display = (800, 600)
+    screen = pygame.display.set_mode(display)
+    pygame.display.set_caption("Chicken Invaders - Welcome")
+
+    try:
+        background_image = pygame.image.load(r"C:\Users\omarm\OneDrive\Desktop\222.jpg")
+        background_image = pygame.transform.scale(background_image, display)
+    except:
+        print("Background image not found. Using black background.")
+        background_image = None
+
+    font_title = pygame.font.SysFont("Arial", 50, bold=True)
+    font_option = pygame.font.SysFont("Arial", 30, bold=True)
+
+    button_width = 250
+    button_height = 60
+    button_spacing = 20
+    
+    total_height = 2 * button_height + button_spacing
+    start_y = 450 
+    start_button = pygame.Rect((800 - button_width) // 2, start_y, button_width, button_height)
+    quit_button = pygame.Rect((800 - button_width) // 2, start_y + button_height + button_spacing, button_width, button_height)
+
+    while True:
+        if background_image:
+            screen.blit(background_image, (0, 0))
+        else:
+            screen.fill((0, 0, 0))
+
+        title = font_title.render(".", True, (255, 255, 0))
+        screen.blit(title, (120, 100))
+
+        mouse_pos = pygame.mouse.get_pos()
+        
+        start_hover = start_button.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (0, 0, 0), start_button, border_radius=15)
+        border_color = (255, 255, 255) if start_hover else (200, 200, 200)
+        pygame.draw.rect(screen, border_color, start_button, 3, border_radius=15)
+        start_text = font_option.render("START GAME", True, (255, 255, 255))
+        screen.blit(start_text, (start_button.x + 50, start_button.y + 15))
+
+        quit_hover = quit_button.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (0, 0, 0), quit_button, border_radius=15)
+        border_color = (255, 255, 255) if quit_hover else (200, 200, 200)
+        pygame.draw.rect(screen, border_color, quit_button, 3, border_radius=15)
+        quit_text = font_option.render("QUIT GAME", True, (255, 255, 255))
+        screen.blit(quit_text, (quit_button.x + 60, quit_button.y + 15))
+
+        instruction_font = pygame.font.SysFont("Arial", 20)
+        instruction = instruction_font.render(".", True, (255, 255, 255))
+        screen.blit(instruction, (250, 400))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if start_button.collidepoint(mouse_pos):
+                    return True 
+                if quit_button.collidepoint(mouse_pos):
+                    pygame.quit()
+                    quit()
+
+        pygame.display.update()
+
+
 def main():
     global player_x, lives, score, angle_rocket, power_level, extra_life_awards
-    global shoot_sound, whiteegg_sound, blackegg_sound, goldegg_sound, kill_sound, gameover_sound, win_sound
-
-    while True:  # Outer loop for restarting the game
-        # Omar - welcome screen
-        welcome_screen()
-        
-        # Reset game variables
+    
+    # Omar - welcome screen
+    welcome_screen()
+    
+    while True:
+        # Reset game variables for new game
         player_x = 0
         lives = 3
         score = 0
         power_level = 1
         extra_life_awards = 0
-
-        # Load sounds
-        try:
-            shoot_sound = pygame.mixer.Sound("shoot.wav")
-            whiteegg_sound = pygame.mixer.Sound("white.wav")
-            blackegg_sound = pygame.mixer.Sound("black.wav")
-            win_sound = pygame.mixer.Sound("win.wav")
-            goldegg_sound = pygame.mixer.Sound("gold.wav")
-            kill_sound = pygame.mixer.Sound("kill.wav")
-            gameover_sound = pygame.mixer.Sound("gameover.wav")
-        except:
-            print("Some sound files not found. Game will continue without sounds.")
-            # Create dummy sound objects if files are missing
-            class DummySound:
-                def play(self): pass
-            shoot_sound = whiteegg_sound = blackegg_sound = win_sound = DummySound()
-            goldegg_sound = kill_sound = gameover_sound = DummySound()
-
+        
         # Initialize game after welcome screen
         clock = initialize_game()
         can_shoot = True
@@ -765,7 +725,7 @@ def main():
             # Check game state - if returns True/False, game should end
             result = check_game_state(last_chicken_time)
             if result is not None:
-                if result:  # Play again - break inner loop, outer loop continues
+                if result:  # Play again
                     game_running = False
                     break
                 else:       # Quit
@@ -790,10 +750,4 @@ def main():
             
             pygame.display.flip()
             clock.tick(60)
-        
-        print("Restarting game...")
 
-if __name__ == "__main__":
-    pygame.init()
-    pygame.mixer.init()
-    main()
