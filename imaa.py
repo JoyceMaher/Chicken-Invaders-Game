@@ -6,7 +6,6 @@ from OpenGL.GLUT import *
 import math
 import random
 import time
-import os
 
 glutInit()
 
@@ -427,6 +426,48 @@ def create_power_bullets(player_x, player_y):
 
     return bullets
 
+ # global dictionary to store GIF frames
+
+def gif_background(screen, path, frame_index, max_width=800, max_height=600):
+    global gif_data
+
+    # Load frames if not already loaded
+    if path not in gif_data:
+        gif = Image.open(path)
+        frames = []
+        try:
+            while True:
+                frame = gif.copy().convert("RGBA")
+                w, h = frame.size
+                scale = min(max_width / w, max_height / h)
+                frame = frame.resize((int(w*scale), int(h*scale)), Image.Resampling.LANCZOS)
+
+                pygame_image = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode).convert_alpha()
+                frames.append(pygame_image)
+
+                gif.seek(gif.tell() + 1)
+        except EOFError:
+            pass
+        finally:
+            gif.close()
+
+        gif_data[path] = frames
+
+    frames = gif_data[path]
+
+    # Fallback if frames are empty
+    if not frames:
+        screen.fill((0,0,0))
+        return frame_index
+
+    # Draw current frame
+    current_frame = frames[frame_index % len(frames)]
+    screen.blit(current_frame, (0,0))
+
+    # Return next frame index
+    return (frame_index + 1) % len(frames)
+
+
 # Jojo  functions
 def draw_score(score_value):
     glPushAttrib(GL_LIGHTING_BIT)
@@ -629,7 +670,7 @@ def main():
     kill_sound       = pygame.mixer.Sound("kill.wav")
     gameover_sound   = pygame.mixer.Sound("gameover.wav")
 
-    
+
     # Initialize game after welcome screen
     clock = initialize_game()
     can_shoot = True
