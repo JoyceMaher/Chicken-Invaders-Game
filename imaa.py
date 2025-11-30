@@ -26,10 +26,8 @@ power_level=1
 
 # Score properties / Jojo 
 score = 0
-score_for_extra_life = 100
 lives = 3
 max_lives = 5
-extra_life_awards = 0
 
 # Omar functions
 def draw_sphere(x, y, z, radius, r, g, b):
@@ -111,10 +109,9 @@ def draw_chicken_3d(x, y, z, scale=1.0, type="white"):
     draw_cube(x+0.15*scale, y-0.7*scale, z, 0.1*scale, 1,0.7,0)
 
 def generate_chickens(n):
-    num_black = int(n*0.6)
-    num_white = int(n*0.3)
-    num_gold = n - num_black - num_white
-    types_list = ["black"]*num_black + ["white"]*num_white + ["gold"]*num_gold
+    num_white = int(n*0.6)
+    num_gold = int(n*0.4)
+    types_list = ["white"]*num_white + ["gold"]*num_gold
     random.shuffle(types_list)
     
     chickens = []
@@ -211,7 +208,7 @@ def drop_eggs(chickens, eggs, start_time):
             if 'egg_offset' not in c:
                 c['egg_offset'] = random.uniform(0, 3)  # Random offset between 0-3 seconds
             
-            base_interval = {'black': 6, 'white': 5, 'gold': 7}[c['type']]
+            base_interval = { 'white': 5, 'gold': 7}[c['type']]
             drop_interval = base_interval
             
             # Apply the individual offset
@@ -224,7 +221,7 @@ def drop_eggs(chickens, eggs, start_time):
 
 def draw_eggs(eggs):
     for egg in eggs:
-        color = {'black': (0,0,0), 'white': (1,1,1), 'gold': (1,0.84,0)}[egg['type']]
+        color = {'white': (1,1,1), 'gold': (1,0.84,0)}[egg['type']]
         draw_oval(egg['x'], egg['y'], 0, 0.1,0.2,*color )  # Changed to sphere
 
 def welcome_screen():
@@ -514,23 +511,24 @@ def create_power_bullets(player_x, player_y):
     return bullets
 
 # Jojo  functions
+
 def draw_score(score_value):
     glPushAttrib(GL_LIGHTING_BIT)
     glDisable(GL_LIGHTING)
     glColor3f(1, 1, 0)            
-    glRasterPos3f(-7, 5, 0)     
+    glRasterPos3f(-9, 5, 0)  
     for ch in f"Score: {score_value}":
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, ord(ch))
     glPopAttrib()
 
 def draw_hearts(lives):
     rotation_angle = pygame.time.get_ticks() * 0.05
     total_hearts = min(max_lives, lives)
-    start_x = 7
+    start_x = 7  
     y = 5.2      
     
     for i in range(total_hearts):
-        x = start_x - i * 1.0  
+        x = start_x - i * 1.0 
         size = 0.8
         
         glPushMatrix()
@@ -582,21 +580,9 @@ def check_win(last_chicken_time):
             return True
     return False
 
-def collect_white_egg():  
-    global score
-    score += 10
-    print("Collected white egg! +10 points")
-
-def collect_black_egg():
-    global lives,power_level
-    if lives > 0:
-        lives -= 1
-        power_level=1
-    print("Collected black egg! -1 life")
-
 def update_eggs(eggs, chicken_size=0.5):
     eggs_to_remove = []
-    global score, lives
+    global score, lives, power_level
     
     for egg in eggs:
         egg['y'] -= 0.1
@@ -605,29 +591,19 @@ def update_eggs(eggs, chicken_size=0.5):
             abs(egg['y'] - player_y) < (chicken_size/2 + player_height/2)):
             
             if egg["type"] == "white":
-                collect_white_egg() 
+                if lives > 0:
+                    lives -= 1
+                    power_level = 1
                 whiteegg_sound.play() 
-            elif egg["type"] == "black":
-                collect_black_egg()
-                blackegg_sound.play()
-            elif egg["type"]=="gold":
+            elif egg["type"] == "gold":
                 collect_gold_egg()
                 goldegg_sound.play()
             eggs_to_remove.append(egg)
             
     
-    # Remove eggs that collided with player
     for egg in eggs_to_remove:
         if egg in eggs:
             eggs.remove(egg)
-            
-    # Check for extra lives
-    should_have = score // score_for_extra_life
-    global extra_life_awards
-    if should_have > extra_life_awards:
-        gained = should_have - extra_life_awards
-        lives = min(lives + gained, max_lives)
-        extra_life_awards = should_have
         
     return eggs
 
@@ -638,20 +614,15 @@ def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
     for bullet in bullets:
         for ch in chickens:
             if ch['alive']:
-                # Calculate actual chicken position
                 actual_x = ch['base_x'] + (ch['offset_x'] if ch['arrived'] else 0)
                 actual_y = ch['base_y'] + (ch['offset_y'] if ch['arrived'] else 0)
                 
-                # Check collision
                 if (abs(bullet["x"] - actual_x) < (bullet_width/2 + chicken_size/2) and 
                     abs(bullet["y"] - actual_y) < (bullet_height/2 + chicken_size/2)):
                     bullets_to_remove.append(bullet)
                     ch['alive'] = False
                     kill_sound.play()
-                    # Add score based on chicken type
-                    if ch['type'] == "black":
-                        score += 5
-                    elif ch['type'] == "white":
+                    if ch['type'] == "white":
                         score += 10
                     elif ch['type'] == "gold":
                         score += 20
@@ -674,13 +645,37 @@ def check_game_state(last_chicken_time):
     global lives
     
     if check_win(last_chicken_time):
+        # Stop background music and play win sound
+        pygame.mixer.music.stop()
+        try:
+            win_sound.play()
+        except:
+            pass
         # Show win screen
         play_again = game_over_screen(win=True)
+        # Play intro music when returning to menu
+        try:
+            pygame.mixer.music.load("intro.wav")
+            pygame.mixer.music.play(0)
+        except:
+            pass
         return play_again
     
     if lives <= 0:
+        # Stop background music and play game over sound
+        pygame.mixer.music.stop()
+        try:
+            gameover_sound.play()
+        except:
+            pass
         # Show game over screen
         play_again = game_over_screen(win=False)
+        # Play intro music when returning to menu
+        try:
+            pygame.mixer.music.load("intro.wav")
+            pygame.mixer.music.play(0)
+        except:
+            pass
         return play_again
     
     return None
@@ -695,10 +690,10 @@ def initialize_game():
     return pygame.time.Clock()
 
 def main():
-    global player_x, lives, score, angle_rocket, power_level, extra_life_awards
-    global shoot_sound, whiteegg_sound, blackegg_sound, goldegg_sound, kill_sound, gameover_sound, win_sound
+    global player_x, lives, score, angle_rocket, power_level
+    global shoot_sound, whiteegg_sound, goldegg_sound, kill_sound, gameover_sound, win_sound
 
-    while True:  # Outer loop for restarting the game
+    while True: 
         # Omar - welcome screen
         welcome_screen()
         
@@ -707,24 +702,25 @@ def main():
         lives = 3
         score = 0
         power_level = 1
-        extra_life_awards = 0
 
         # Load sounds
         try:
             shoot_sound = pygame.mixer.Sound("shoot.wav")
-            whiteegg_sound = pygame.mixer.Sound("white.wav")
-            blackegg_sound = pygame.mixer.Sound("black.wav")
+            whiteegg_sound = pygame.mixer.Sound("boom.wav")
             win_sound = pygame.mixer.Sound("win.wav")
             goldegg_sound = pygame.mixer.Sound("gold.wav")
             kill_sound = pygame.mixer.Sound("kill.wav")
             gameover_sound = pygame.mixer.Sound("gameover.wav")
         except:
             print("Some sound files not found. Game will continue without sounds.")
-            # Create dummy sound objects if files are missing
-            class DummySound:
-                def play(self): pass
-            shoot_sound = whiteegg_sound = blackegg_sound = win_sound = DummySound()
-            goldegg_sound = kill_sound = gameover_sound = DummySound()
+
+        # Play background music with lower volume
+        try:
+            pygame.mixer.music.load("song.wav")
+            pygame.mixer.music.play(-1)  
+            print("Background music started at lower volume")
+        except:
+            print("Background music file 'song.wav' not found. Game will continue without background music.")
 
         # Initialize game after welcome screen
         clock = initialize_game()
@@ -766,9 +762,11 @@ def main():
             result = check_game_state(last_chicken_time)
             if result is not None:
                 if result:  # Play again - break inner loop, outer loop continues
+                    pygame.mixer.music.stop()  # Stop background music when game ends
                     game_running = False
                     break
                 else:       # Quit
+                    pygame.mixer.music.stop()  # Stop background music when quitting
                     pygame.quit()
                     quit()
             
