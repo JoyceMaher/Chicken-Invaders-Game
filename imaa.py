@@ -23,6 +23,11 @@ bullet_height = 0.3
 angle_rocket = 0
 power_level=1
 
+ship_destroyed = False
+ship_respawn_timer = 0
+ship_respawn_delay = 2000  # 2 seconds respawn delay
+ship_explosion_particles = []
+
 # Score properties / Jojo 
 score = 0
 lives = 3
@@ -375,6 +380,7 @@ def game_over_screen(win=False):
 
         pygame.display.update()
 
+
 # Saleh functions
 def setup_lighting():
     glEnable(GL_LIGHTING)
@@ -676,6 +682,8 @@ def initialize_game():
 def main():
     global player_x, lives, score, angle_rocket, power_level
     global shoot_sound, whiteegg_sound, goldegg_sound, kill_sound, gameover_sound, win_sound
+    # Add these global variables for explosion
+    global ship_destroyed, ship_respawn_timer, ship_explosion_particles
 
     while True: 
         # Omar - welcome screen
@@ -686,6 +694,10 @@ def main():
         lives = 3
         score = 0
         power_level = 1
+        # Add explosion reset variables
+        ship_destroyed = False
+        ship_respawn_timer = 0
+        ship_explosion_particles = []
 
         # Load sounds / Jojo
         try:
@@ -729,9 +741,15 @@ def main():
                 if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
                     can_shoot = True
 
-            # Saleh: Handle player input and update bullets
-            can_shoot, bullets = handle_player_input(can_shoot, bullets)
-            bullets = update_bullets(bullets)
+            # MODIFIED: Check if ship should respawn and update explosion
+            if ship_destroyed:
+                update_ship_explosion()
+                if check_ship_respawn():
+                    print("Ship respawned!")
+            else:
+                # Saleh: Handle player input and update bullets (only if ship is not destroyed)
+                can_shoot, bullets = handle_player_input(can_shoot, bullets)
+                bullets = update_bullets(bullets)
             
             # Clear screen
             glClearColor(0.2, 0.6, 1.0, 1)
@@ -753,10 +771,15 @@ def main():
                     pygame.quit()
                     quit()
             
-            # Saleh 
-            draw_player(player_speed, player_height, player_radius, player_x, player_y, player_z, angle_rocket)               
+            # MODIFIED: Draw player only if not destroyed, otherwise draw explosion
+            if not ship_destroyed:
+                draw_player(player_speed, player_height, player_radius, player_x, player_y, player_z, angle_rocket)               
+                angle_rocket += 1
+            else:
+                # Draw explosion instead of ship
+                draw_ship_explosion()
+            
             draw_bullets(bullets)         
-            angle_rocket += 1
 
             # Jojo 
             draw_hearts(lives)     
