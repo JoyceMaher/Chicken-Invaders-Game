@@ -185,8 +185,8 @@ def update_chicken_movement(chickens, fixed_speed=0.08):
             c['offset_x'] = math.sin(t*c['rand_speed_x'] + c['rand_phase']) * c['rand_amp_x']
             c['offset_y'] = math.sin(t*c['rand_speed_y'] + c['rand_phase']) * c['rand_amp_y']
 
-            c['base_x'] += c['direction'] * 0.02
-            if c['base_x'] >= 6 or c['base_x'] <= -6:
+            c['base_x'] += c['direction'] * 0.07
+            if c['base_x'] >= 9 or c['base_x'] <= -9:
                 c['direction'] *= -1
     return chickens
 
@@ -380,6 +380,65 @@ def game_over_screen(win=False):
 
         pygame.display.update()
 
+def destroy_ship():
+    """Create explosion particles when ship is destroyed"""
+    global ship_destroyed, ship_respawn_timer, ship_explosion_particles
+    print("Destroying ship!")  # Debug print
+    ship_destroyed = True
+    ship_respawn_timer = pygame.time.get_ticks()
+    
+    # Create explosion particles
+    ship_explosion_particles.clear()
+    for _ in range(20):
+        particle = {
+            'x': player_x,
+            'y': player_y,
+            'z': 0,
+            'vx': random.uniform(-0.1, 0.1),
+            'vy': random.uniform(-0.1, 0.1),
+            'vz': random.uniform(-0.1, 0.1),
+            'life': 1.0,
+            'size': random.uniform(0.05, 0.2)
+        }
+        ship_explosion_particles.append(particle)
+    print(f"Created {len(ship_explosion_particles)} explosion particles")  # Debug print
+
+def update_ship_explosion():
+    """Update explosion particles"""
+    global ship_explosion_particles
+    
+    for particle in ship_explosion_particles[:]:
+        particle['x'] += particle['vx']
+        particle['y'] += particle['vy']
+        particle['z'] += particle['vz']
+        particle['life'] -= 0.02
+        
+        if particle['life'] <= 0:
+            ship_explosion_particles.remove(particle)
+
+def draw_ship_explosion():
+    """Draw explosion particles using points"""
+    glPushAttrib(GL_LIGHTING_BIT)
+    glDisable(GL_LIGHTING)
+    glPointSize(5.0)
+    glBegin(GL_POINTS)
+    for particle in ship_explosion_particles:
+        glColor3f(1, 1 - particle['life'], 0)  # Orange to yellow fade
+        glVertex3f(particle['x'], particle['y'], particle['z'])
+    glEnd()
+    glPopAttrib()
+
+def check_ship_respawn():
+    """Check if ship should respawn after destruction"""
+    global ship_destroyed, ship_respawn_timer
+    
+    if ship_destroyed:
+        current_time = pygame.time.get_ticks()
+        if current_time - ship_respawn_timer >= ship_respawn_delay:
+            ship_destroyed = False
+            ship_explosion_particles.clear()
+            return True
+    return False
 
 # Saleh functions
 def setup_lighting():
@@ -601,6 +660,7 @@ def update_eggs(eggs, chicken_size=0.5):
                 if lives > 0:
                     lives -= 1
                     power_level = 1
+                    destroy_ship() 
                 whiteegg_sound.play() 
             elif egg["type"] == "gold":
                 collect_gold_egg()
