@@ -6,7 +6,6 @@ from OpenGL.GLUT import *
 import math
 import random
 import time
-import os
 
 glutInit()
 
@@ -33,6 +32,7 @@ ship_explosion_particles = []
 score = 0
 lives = 3
 max_lives = 5
+
 
 # Omar functions
 def draw_sphere(x, y, z, radius, r, g, b):
@@ -516,7 +516,7 @@ def create_power_bullets(player_x, player_y):
 
     return bullets
 
-# Jojo  functions
+# Jojo functions 
 
 def draw_score(score_value):
     glPushAttrib(GL_LIGHTING_BIT)
@@ -530,165 +530,149 @@ def draw_score(score_value):
 def draw_hearts(lives):
     rotation_angle = pygame.time.get_ticks() * 0.05
     total_hearts = min(max_lives, lives)
-    start_x = 7  
-    y = 5.2      
     
     for i in range(total_hearts):
-        x = start_x - i * 1.0 
-        size = 0.8
-        
+        x = 7 - i * 1.0 
         glPushMatrix()
-        glTranslatef(x, y, 0)
+        glTranslatef(x, 5.2, 0)
         glRotatef(rotation_angle, 0, 1, 0)
-        glScalef(size, size, size)
+        glScalef(0.8, 0.8, 0.8)
         glColor3f(1, 0, 0)
         
-        # Triangle part (bottom)
+        # Simple heart shape - triangle + two circles
         glBegin(GL_TRIANGLES)
         glVertex3f(0, -0.5, 0)
         glVertex3f(0.3, 0, 0)
         glVertex3f(-0.3, 0, 0)
         glEnd()
         
-        # Left semicircle
+        # Left circle
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(-0.15, 0, 0)
-        rad = 0.15
-        for angle in range(0, 181, 5):
-            glVertex3f(-0.15 + rad * math.cos(math.radians(angle)),
-                       0 + rad * math.sin(math.radians(angle)), 0)
+        for angle in range(0, 181, 20):  # Reduced resolution
+            rad = 0.15
+            glVertex3f(-0.15 + rad * math.cos(math.radians(angle)), 
+                       rad * math.sin(math.radians(angle)), 0)
         glEnd()
         
-        # Right semicircle
+        # Right circle
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(0.15, 0, 0)
-        for angle in range(0, 181, 5):
-            glVertex3f(0.15 + rad * math.cos(math.radians(angle)),
-                       0 + rad * math.sin(math.radians(angle)), 0)
+        for angle in range(0, 181, 20):  # Reduced resolution
+            rad = 0.15
+            glVertex3f(0.15 + rad * math.cos(math.radians(angle)), 
+                       rad * math.sin(math.radians(angle)), 0)
         glEnd()
         
         glPopMatrix()
 
-def show_message(text):
-    glPushAttrib(GL_LIGHTING_BIT)
-    glDisable(GL_LIGHTING)
-    glColor3f(0,1,0)
-    glRasterPos3f(-1.0,0,-9.9)
-    for ch in text:
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(ch))
-    glPopAttrib()
-    pygame.display.flip()
-    pygame.time.wait(1000)  # Just show briefly, game over screen will follow
-
-def check_win(last_chicken_time):
-    if last_chicken_time is not None:
-        if pygame.time.get_ticks() - last_chicken_time >= 1000:
-            return True
-    return False
-
-def update_eggs(eggs, chicken_size=0.5):
+def update_eggs(eggs, current_lives, current_power):
     eggs_to_remove = []
-    global score, lives, power_level
+    new_lives = current_lives
+    new_power = current_power
     
     for egg in eggs:
         egg['y'] -= 0.1
         
-        if (abs(egg['x'] - player_x) < (chicken_size/2 + player_width/2) and 
-            abs(egg['y'] - player_y) < (chicken_size/2 + player_height/2) and
-            not ship_destroyed):  # Can't collect eggs while ship is destroyed
+        # Simple collision check
+        if (abs(egg['x'] - player_x) < 0.6 and 
+            abs(egg['y'] - player_y) < 0.3):
             
             if egg["type"] == "white":
-                if lives > 0:
-                    lives -= 1
-                    power_level = 1
-                whiteegg_sound.play() 
-            elif egg["type"] == "gold":
-                collect_gold_egg()
-                goldegg_sound.play()
+                if new_lives > 0:
+                    new_lives -= 1
+                    new_power = 1
+                if 'whiteegg_sound' in globals():
+                    whiteegg_sound.play()
+            else:  # gold egg
+                if new_power < 3:
+                    new_power += 1
+                if 'goldegg_sound' in globals():
+                    goldegg_sound.play()
             eggs_to_remove.append(egg)
-            
     
-    for egg in eggs_to_remove:
-        if egg in eggs:
-            eggs.remove(egg)
-        
-    return eggs
-def check_bullet_chicken_collisions(bullets, chickens, chicken_size=0.5):
-    bullets_to_remove = []
-    global score
+    new_eggs = [egg for egg in eggs if egg not in eggs_to_remove]
+    return new_eggs, new_lives, new_power
+
+def check_bullet_chicken_collisions(bullets, chickens):
+    new_bullets = []
     
     for bullet in bullets:
-        for ch in chickens:
-            if ch['alive']:
-                actual_x = ch['base_x'] + (ch['offset_x'] if ch['arrived'] else 0)
-                actual_y = ch['base_y'] + (ch['offset_y'] if ch['arrived'] else 0)
+        hit = False
+        for chicken in chickens:
+            if chicken['alive']:
+                # Simple distance-based collision
+                actual_x = chicken['base_x'] + (chicken['offset_x'] if chicken['arrived'] else 0)
+                actual_y = chicken['base_y'] + (chicken['offset_y'] if chicken['arrived'] else 0)
                 
-                if (abs(bullet["x"] - actual_x) < (bullet_width/2 + chicken_size/2) and 
-                    abs(bullet["y"] - actual_y) < (bullet_height/2 + chicken_size/2)):
-                    bullets_to_remove.append(bullet)
-                    ch['alive'] = False
-                    kill_sound.play()
-                    if ch['type'] == "white":
-                        score += 10
-                    elif ch['type'] == "gold":
-                        score += 20
+                if (abs(bullet["x"] - actual_x) < 0.4 and 
+                    abs(bullet["y"] - actual_y) < 0.4):
+                    chicken['alive'] = False
+                    if 'kill_sound' in globals():
+                        kill_sound.play()
+                    # Add score
+                    global score
+                    score += 20 if chicken['type'] == "gold" else 10
+                    hit = True
                     break
+        
+        if not hit:
+            new_bullets.append(bullet)
     
-    # Remove bullets that hit chickens
-    for b in bullets_to_remove:
-        if b in bullets: 
-            bullets.remove(b)
-    return bullets, chickens
+    return new_bullets, chickens
 
 def update_last_chicken_time(chickens, last_chicken_time):
-    if all(not c['alive'] for c in chickens) and last_chicken_time is None:
-        last_chicken_time = pygame.time.get_ticks()
-        kill_sound.play()
-
+    if last_chicken_time is None:
+        # Check if all chickens are dead
+        all_dead = True
+        for chicken in chickens:
+            if chicken['alive']:
+                all_dead = False
+                break
+        
+        if all_dead:
+            last_chicken_time = pygame.time.get_ticks()
+            if 'kill_sound' in globals():
+                kill_sound.play()
+    
     return last_chicken_time
 
 def check_game_state(last_chicken_time):
-    global lives
+    # Check win condition
+    if last_chicken_time and pygame.time.get_ticks() - last_chicken_time >= 1000:
+        return handle_game_end(True)
     
-    if check_win(last_chicken_time):
-        # Stop background music and play win sound
-        pygame.mixer.music.stop()
-        try:
-            win_sound.play()
-        except:
-            pass
-        # Show win screen
-        play_again = game_over_screen(win=True)
-        # Play intro music when returning to menu
-        try:
-            pygame.mixer.music.load("intro.wav")
-            pygame.mixer.music.play(0)
-        except:
-            pass
-        return play_again
-    
+    # Check lose condition  
     if lives <= 0:
-        # Stop background music and play game over sound
-        pygame.mixer.music.stop()
-        try:
-            gameover_sound.play()
-        except:
-            pass
-        # Show game over screen
-        play_again = game_over_screen(win=False)
-        # Play intro music when returning to menu
-        try:
-            pygame.mixer.music.load("intro.wav")
-            pygame.mixer.music.play(0)
-        except:
-            pass
-        return play_again
+        return handle_game_end(False)
     
     return None
 
+def handle_game_end(is_win):
+    pygame.mixer.music.stop()
+    
+    try:
+        if is_win and 'win_sound' in globals():
+            win_sound.play()
+        elif not is_win and 'gameover_sound' in globals():
+            gameover_sound.play()
+    except:
+        pass
+    
+    play_again = game_over_screen(win=is_win)
+    
+    # Restart menu music
+    try:
+        pygame.mixer.music.load("intro.wav")
+        pygame.mixer.music.play(0)
+    except:
+        pass
+    
+    return play_again
+
 def initialize_game():
     pygame.init()
-    display = (1400, 800)  # Updated to new screen size
+    display = (1400, 800)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
     gluPerspective(45, display[0] / display[1], 0.1, 50.0)
     glTranslatef(0, 0, -15)
@@ -715,7 +699,7 @@ def main():
         ship_respawn_timer = 0
         ship_explosion_particles = []
 
-        # Load sounds
+        # Load sounds / Jojo
         try:
             shoot_sound = pygame.mixer.Sound("shoot.wav")
             whiteegg_sound = pygame.mixer.Sound("boom.wav")
@@ -771,20 +755,19 @@ def main():
             glClearColor(0.2, 0.6, 1.0, 1)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             
-            # Jojo: Update game state and check collisions
-            eggs = update_eggs(eggs)
+            # Jojo
+            eggs, lives, power_level = update_eggs(eggs, lives, power_level)
             bullets, chickens = check_bullet_chicken_collisions(bullets, chickens)
             last_chicken_time = update_last_chicken_time(chickens, last_chicken_time)
             
-            # Check game state - if returns True/False, game should end
             result = check_game_state(last_chicken_time)
             if result is not None:
-                if result:  # Play again - break inner loop, outer loop continues
-                    pygame.mixer.music.stop()  # Stop background music when game ends
+                if result: 
+                    pygame.mixer.music.stop()  
                     game_running = False
                     break
-                else:       # Quit
-                    pygame.mixer.music.stop()  # Stop background music when quitting
+                else:      
+                    pygame.mixer.music.stop()  
                     pygame.quit()
                     quit()
             
