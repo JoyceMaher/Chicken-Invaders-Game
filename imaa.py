@@ -528,7 +528,7 @@ def handle_player_input(can_shoot, bullets):
         player_x -= player_speed
     if keys[pygame.K_RIGHT]: 
         player_x += player_speed
-    player_x = max(min(player_x, 7), -7)
+    player_x = max(min(player_x, 9), -9)
 
     # Shooting
     if keys[pygame.K_SPACE] and can_shoot:
@@ -574,6 +574,142 @@ def create_power_bullets(player_x, player_y):
         bullets.append({"x": player_x + 0.25, "y": player_y})
 
     return bullets
+
+def draw_background():
+ 
+    # Static list of stars - initialized once
+    if not hasattr(draw_background, "stars_initialized"):
+        draw_background.stars = []
+        draw_background.stars_initialized = True
+        
+        # Generate random star positions (fixed positions, random visibility)
+        num_stars = 200  # Number of stars in the background
+        for _ in range(num_stars):
+            # Random positions in the background (behind game objects)
+            x = random.uniform(-30, 30)  # Wider range for x
+            y = random.uniform(-20, 20)    # Wider range for y  
+            z = -30  # Fixed z-coordinate behind everything
+            
+            # Random initial state
+            star = {
+                'x': x,
+                'y': y, 
+                'z': z,
+                'visible': random.choice([True, False]),  # Random initial visibility
+                'timer': random.uniform(0, 5),  # Random timer offset
+                'blink_speed': random.uniform(0.3, 4.0),  # Random blink speed
+                'size': random.uniform(0.02, 0.08),  # Random star size
+                'brightness': random.uniform(0.3, 1.0)  # Random brightness
+            }
+            draw_background.stars.append(star)
+    
+    # Update star visibility based on timers
+    current_time = time.time()
+    for star in draw_background.stars:
+        # Update timer
+        star['timer'] += 0.016  # Assuming ~60 FPS
+        
+        # Toggle visibility when timer exceeds blink speed
+        if star['timer'] >= star['blink_speed']:
+            star['visible'] = not star['visible']
+            star['timer'] = 0
+            # Occasionally change blink speed for more randomness
+            if random.random() < 0.1:  # 10% chance
+                star['blink_speed'] = random.uniform(0.5, 3.0)
+        
+        # Occasionally force a state change for more dynamic effect
+        if random.random() < 0.005:  # 0.5% chance per frame
+            star['visible'] = random.choice([True, False])
+    
+    # Draw visible stars
+    glPushAttrib(GL_LIGHTING_BIT)
+    glDisable(GL_LIGHTING)
+    glPointSize(3.0)
+    
+    glBegin(GL_POINTS)
+    for star in draw_background.stars:
+        if star['visible']:
+            # Create a twinkling effect by varying brightness
+            twinkle = (math.sin(time.time() * star['blink_speed'] * 2) + 1) * 0.3 + 0.4
+            brightness = star['brightness'] * twinkle
+            
+            # Random star colors (mostly white/blue with some variation)
+            if random.random() < 0.7:  # 70% white/blue stars
+                r = brightness
+                g = brightness * random.uniform(0.8, 1.0)
+                b = 1.0
+            elif random.random() < 0.5:  # 15% yellow stars
+                r = brightness
+                g = brightness
+                b = brightness * 0.5
+            else:  # 15% red/orange stars
+                r = brightness
+                g = brightness * 0.6
+                b = brightness * 0.3
+            
+            glColor3f(r, g, b)
+            glVertex3f(star['x'], star['y'], star['z'])
+    
+    glEnd()
+    
+    # Add some occasional "shooting stars"
+    if not hasattr(draw_background, "shooting_stars"):
+        draw_background.shooting_stars = []
+        draw_background.last_shooting_star = 0
+    
+    current_time = pygame.time.get_ticks() / 1000.0
+    # Spawn a new shooting star randomly (every 10-30 seconds)
+    if current_time - draw_background.last_shooting_star > random.uniform(10, 30):
+        draw_background.shooting_stars.append({
+            'x': random.uniform(-15, 15),
+            'y': 10,  # Start at top
+            'z': -19,  # Slightly in front of regular stars
+            'speed': random.uniform(0.3, 0.8),
+            'length': random.uniform(0.5, 1.5),
+            'trail': [],
+            'max_trail_length': 10,
+            'active': True
+        })
+        draw_background.last_shooting_star = current_time
+    
+    # Update and draw shooting stars
+    for shooting_star in draw_background.shooting_stars[:]:
+        if shooting_star['active']:
+            # Add current position to trail
+            shooting_star['trail'].append((shooting_star['x'], shooting_star['y'], shooting_star['z']))
+            if len(shooting_star['trail']) > shooting_star['max_trail_length']:
+                shooting_star['trail'].pop(0)
+            
+            # Move shooting star
+            shooting_star['x'] += shooting_star['speed'] * random.uniform(-0.5, 0.5)
+            shooting_star['y'] -= shooting_star['speed']
+            
+            # Check if shooting star is out of bounds
+            if shooting_star['y'] < -10 or abs(shooting_star['x']) > 20:
+                shooting_star['active'] = False
+                shooting_star['trail'].clear()
+            
+            # Draw shooting star trail
+            if len(shooting_star['trail']) > 1:
+                glBegin(GL_LINE_STRIP)
+                for i, (tx, ty, tz) in enumerate(shooting_star['trail']):
+                    alpha = i / len(shooting_star['trail'])  # Fade out trail
+                    glColor3f(1.0, 1.0, 1.0 * alpha)
+                    glVertex3f(tx, ty, tz)
+                glEnd()
+                
+                # Draw shooting star head
+                glPointSize(4.0)
+                glBegin(GL_POINTS)
+                glColor3f(1.0, 1.0, 1.0)
+                glVertex3f(shooting_star['x'], shooting_star['y'], shooting_star['z'])
+                glEnd()
+                glPointSize(3.0)
+        else:
+            # Remove inactive shooting stars
+            draw_background.shooting_stars.remove(shooting_star)
+    
+    glPopAttrib()
 
 # Jojo functions 
 
@@ -811,9 +947,12 @@ def main():
                 can_shoot, bullets = handle_player_input(can_shoot, bullets)
                 bullets = update_bullets(bullets)
             
-            # Clear screen
-            glClearColor(0.2, 0.6, 1.0, 1)
+            # Clear screen with dark blue/black background for space
+            glClearColor(0.0, 0.0, 0.1, 1)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            
+            # Draw the twinkling stars background
+            draw_background()
             
             # Jojo
             eggs, lives, power_level = update_eggs(eggs, lives, power_level)
