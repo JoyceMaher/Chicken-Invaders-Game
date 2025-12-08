@@ -87,8 +87,6 @@ def draw_cube(x, y, z, size, r, g, b):
 def draw_chicken_3d(x, y, z, scale=1.0, type="white"):
     if type == "white":
         body_color = (1,1,1)
-    elif type == "black":
-        body_color = (0.1,0.1,0.1)
     elif type == "gold":
         body_color = (1,0.84,0)
     
