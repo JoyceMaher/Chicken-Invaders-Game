@@ -31,6 +31,7 @@ ship_explosion_particles = []
 # Score properties / Jojo 
 score = 0
 lives = 3
+max_lives = 5
 
 
 # Omar functions
